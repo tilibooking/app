@@ -235,14 +235,14 @@ export default function App() {
     }
   };
 
-  const handleAddJob = async (jobId: string) => {
+  const handleAddJob = async (jobId: string, redirectToQuote: boolean = false) => {
     const numericPart = jobId.replace(/\D/g, '');
     const newJobId = `JOB ${numericPart}`;
     
     try {
       await supabase
         .from('jobs')
-        .insert([{
+        .upsert([{
           id: newJobId,
           date: "Date still pending",
           amount: 0,
@@ -250,6 +250,9 @@ export default function App() {
         }]);
       
       fetchJobs();
+      if (redirectToQuote) {
+        handleQuoteClick(newJobId);
+      }
     } catch (error) {
       console.error('Error adding job:', error);
     }

@@ -1,5 +1,6 @@
 import { 
   ChevronLeft, 
+  ChevronRight,
   BarChart2, 
   Sliders, 
   Plus, 
@@ -124,6 +125,11 @@ export const ProfileView: FC<ProfileViewProps> = ({ user, stats, jobs, onUpdateJ
   const tips = jobsInDateRange
     .filter(job => job.status === 'Completed')
     .reduce((sum, job) => sum + (job.tip || 0), 0);
+
+  // Commission: Sum of commission from completed jobs in range
+  const commission = jobsInDateRange
+    .filter(job => job.status === 'Completed')
+    .reduce((sum, job) => sum + calculateCommission(job.amount), 0);
 
   // 2.9% Fee is 2.9% of (Revenue + Tips)
   const calculatedFee = (calculatedRevenue + tips) * 0.029;
@@ -264,18 +270,22 @@ export const ProfileView: FC<ProfileViewProps> = ({ user, stats, jobs, onUpdateJ
             </div>
 
             {/* Stats Grid */}
-            <div className="grid grid-cols-3 gap-3 mb-6">
-              <div className="glass-card p-3 rounded-2xl text-center border-[#32AE64]/30 bg-[#32AE64]/5">
-                <p className="text-xs text-[#32AE64] mb-1">Revenue</p>
-                <p className="font-semibold text-lg text-[#32AE64]">{calculatedRevenue.toLocaleString('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 })}</p>
+            <div className="grid grid-cols-4 gap-2 mb-6">
+              <div className="glass-card p-2 rounded-2xl text-center border-[#32AE64]/30 bg-[#32AE64]/5">
+                <p className="text-[10px] text-[#32AE64] mb-1">Revenue</p>
+                <p className="font-semibold text-sm text-[#32AE64]">{calculatedRevenue.toLocaleString('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 })}</p>
               </div>
-              <div className="glass-card p-3 rounded-2xl text-center border-yellow-500/30 bg-yellow-500/5">
-                <p className="text-xs text-yellow-500 mb-1">Tips</p>
-                <p className="font-semibold text-lg text-yellow-400">{formatCurrency(tips)}</p>
+              <div className="glass-card p-2 rounded-2xl text-center border-yellow-500/30 bg-yellow-500/5">
+                <p className="text-[10px] text-yellow-500 mb-1">Tips</p>
+                <p className="font-semibold text-sm text-yellow-400">{formatCurrency(tips)}</p>
               </div>
-              <div className="glass-card p-3 rounded-2xl text-center border-[#FF6367]/30 bg-[#FF6367]/5">
-                <p className="text-xs text-[#FF6367] mb-1">2.9% Fee</p>
-                <p className="font-semibold text-lg text-[#FF6367]">{formatCurrency(calculatedFee)}</p>
+              <div className="glass-card p-2 rounded-2xl text-center border-purple-500/30 bg-purple-500/5">
+                <p className="text-[10px] text-purple-400 mb-1">Commission</p>
+                <p className="font-semibold text-sm text-purple-400">{formatCurrency(commission)}</p>
+              </div>
+              <div className="glass-card p-2 rounded-2xl text-center border-[#FF6367]/30 bg-[#FF6367]/5">
+                <p className="text-[10px] text-[#FF6367] mb-1">2.9% Fee</p>
+                <p className="font-semibold text-sm text-[#FF6367]">{formatCurrency(calculatedFee)}</p>
               </div>
             </div>
 
@@ -285,15 +295,17 @@ export const ProfileView: FC<ProfileViewProps> = ({ user, stats, jobs, onUpdateJ
                 <span className="text-gray-400">Payment breakdown</span>
               </div>
               {(() => {
-                const total = calculatedRevenue + tips + calculatedFee;
+                const total = calculatedRevenue + tips + commission + calculatedFee;
                 const revenuePercent = total > 0 ? (calculatedRevenue / total) * 100 : 0;
                 const tipsPercent = total > 0 ? (tips / total) * 100 : 0;
+                const commissionPercent = total > 0 ? (commission / total) * 100 : 0;
                 const feesPercent = total > 0 ? (calculatedFee / total) * 100 : 0;
                 
                 return (
                   <div className="w-full h-2 bg-gray-700 rounded-full overflow-hidden flex">
                     <div className="h-full bg-[#32AE64]" style={{ width: `${revenuePercent}%` }}></div>
                     <div className="h-full bg-yellow-400" style={{ width: `${tipsPercent}%` }}></div>
+                    <div className="h-full bg-purple-500" style={{ width: `${commissionPercent}%` }}></div>
                     <div className="h-full bg-[#FF6367]" style={{ width: `${feesPercent}%` }}></div>
                   </div>
                 );
@@ -301,6 +313,7 @@ export const ProfileView: FC<ProfileViewProps> = ({ user, stats, jobs, onUpdateJ
               <div className="flex justify-between mt-2 text-[11px] text-gray-500">
                 <span className="flex items-center gap-1"><div className="w-2 h-2 rounded-full bg-[#32AE64]"></div> Revenue</span>
                 <span className="flex items-center gap-1"><div className="w-2 h-2 rounded-full bg-yellow-400"></div> Tips</span>
+                <span className="flex items-center gap-1"><div className="w-2 h-2 rounded-full bg-purple-500"></div> Commission</span>
                 <span className="flex items-center gap-1"><div className="w-2 h-2 rounded-full bg-[#FF6367]"></div> Fees</span>
               </div>
             </div>
@@ -516,6 +529,7 @@ export const POSView: FC<POSViewProps> = ({ onProcessPayment, initialJobId = '' 
   const [isProcessing, setIsProcessing] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
   const [isTableExpanded, setIsTableExpanded] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   const handleLabourCostChange = (value: string) => {
     setAmount(value);
@@ -573,12 +587,14 @@ export const POSView: FC<POSViewProps> = ({ onProcessPayment, initialJobId = '' 
 
   const handleProcess = async () => {
     if (!jobId || jobId.length !== 4) {
-      alert("Please enter a valid 4-digit Job ID");
+      setErrorMessage("Please enter a valid 4-digit Job ID");
+      setTimeout(() => setErrorMessage(null), 2500);
       return;
     }
 
-    if (!amount || parseFloat(amount) <= 0) {
-      alert("Please enter a valid amount");
+    if (!amount || parseFloat(amount) <= 0 || !customerPrice || parseFloat(customerPrice) <= 0) {
+      setErrorMessage("Please enter valid labour cost and total price");
+      setTimeout(() => setErrorMessage(null), 2500);
       return;
     }
 
@@ -602,6 +618,21 @@ export const POSView: FC<POSViewProps> = ({ onProcessPayment, initialJobId = '' 
       {/* Input Form */}
       <div className="space-y-4">
         
+        {/* Error Message Popup */}
+        <AnimatePresence>
+          {errorMessage && (
+            <motion.div
+              initial={{ opacity: 0, y: -20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
+              className="absolute top-4 left-4 right-4 z-50 bg-red-500 text-white px-4 py-3 rounded-xl shadow-lg flex items-center gap-2"
+            >
+              <div className="w-2 h-2 rounded-full bg-white animate-pulse"></div>
+              <p className="text-sm font-medium">{errorMessage}</p>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
         {/* Job Details Section */}
         <div className="glass-card p-6 rounded-3xl space-y-6 border border-white/10 overflow-hidden relative">
           {/* Decorative background element */}
@@ -764,7 +795,7 @@ export const POSView: FC<POSViewProps> = ({ onProcessPayment, initialJobId = '' 
 
 interface PendingViewProps {
   jobs: Job[];
-  onAddJob: (jobId: string) => void;
+  onAddJob: (jobId: string, redirectToQuote?: boolean) => void;
   onQuoteClick: (jobId: string) => void;
   onUpdateJob: (jobId: string, updates: Partial<Job>) => void;
 }
@@ -782,7 +813,7 @@ export const PendingView: FC<PendingViewProps> = ({ jobs, onAddJob, onQuoteClick
 
   const handleAddJob = () => {
     if (newJobId.trim()) {
-      onAddJob(newJobId);
+      onAddJob(newJobId, activeTab === 'scheduled');
       setNewJobId('');
     }
   };
@@ -876,31 +907,29 @@ export const PendingView: FC<PendingViewProps> = ({ jobs, onAddJob, onQuoteClick
         </button>
       </div>
 
-      {activeTab === 'approval' && (
-        <div className="mb-4 flex gap-2">
-          <div className="flex-1 glass-input rounded-xl px-3 py-3 flex items-center gap-2">
-            <span className="text-sm font-bold text-gray-400 whitespace-nowrap">JOB ID</span>
-            <input 
-              type="number" 
-              value={newJobId}
-              onChange={(e) => {
-                if (e.target.value.length <= 4) {
-                  setNewJobId(e.target.value);
-                }
-              }}
-              placeholder="0000" 
-              className="bg-transparent border-none p-0 text-sm font-bold focus:ring-0 w-full outline-none placeholder:text-gray-600 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-            />
-          </div>
-          <button
-            onClick={handleAddJob}
-            disabled={!newJobId.trim()}
-            className="bg-[#FACC15] text-black font-medium rounded-xl px-4 py-2 text-sm disabled:opacity-50 disabled:cursor-not-allowed hover:bg-yellow-400 transition"
-          >
-            Add
-          </button>
+      <div className="mb-4 flex gap-2">
+        <div className="flex-1 glass-input rounded-xl px-3 py-3 flex items-center gap-2">
+          <span className="text-sm font-bold text-gray-400 whitespace-nowrap">JOB ID</span>
+          <input 
+            type="number" 
+            value={newJobId}
+            onChange={(e) => {
+              if (e.target.value.length <= 4) {
+                setNewJobId(e.target.value);
+              }
+            }}
+            placeholder="0000" 
+            className="bg-transparent border-none p-0 text-sm font-bold focus:ring-0 w-full outline-none placeholder:text-gray-600 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+          />
         </div>
-      )}
+        <button
+          onClick={handleAddJob}
+          disabled={!newJobId.trim()}
+          className="bg-[#FACC15] text-black font-medium rounded-xl px-4 py-2 text-sm disabled:opacity-50 disabled:cursor-not-allowed hover:bg-yellow-400 transition"
+        >
+          Add
+        </button>
+      </div>
 
       <div className="flex-1 overflow-y-auto no-scrollbar">
         {filteredJobs.length > 0 ? (
@@ -1453,7 +1482,16 @@ export const AnalyticsView: FC<{ jobs: Job[]; showHistory: boolean }> = ({ jobs,
 };
 
 export const TrashView: FC<{ jobs: Job[] }> = ({ jobs }) => {
-  const removedJobs = jobs.filter(job => job.status === 'Removed');
+  const [currentPage, setCurrentPage] = useState(1);
+  const jobsPerPage = 10;
+  
+  // Get removed jobs and limit to 100
+  const removedJobs = jobs.filter(job => job.status === 'Removed').slice(0, 100);
+  
+  const indexOfLastJob = currentPage * jobsPerPage;
+  const indexOfFirstJob = indexOfLastJob - jobsPerPage;
+  const currentJobs = removedJobs.slice(indexOfFirstJob, indexOfLastJob);
+  const totalPages = Math.ceil(removedJobs.length / jobsPerPage);
 
   return (
     <motion.div 
@@ -1472,26 +1510,50 @@ export const TrashView: FC<{ jobs: Job[] }> = ({ jobs }) => {
 
       <div className="flex-1 overflow-y-auto no-scrollbar space-y-3">
         {removedJobs.length > 0 ? (
-          removedJobs.map(job => (
-            <div key={job.id} className="glass-card rounded-2xl p-4 flex items-center justify-between border border-white/5">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center text-gray-400">
-                  <Briefcase className="w-4 h-4" />
+          <>
+            {currentJobs.map(job => (
+              <div key={job.id} className="glass-card rounded-2xl p-4 flex items-center justify-between border border-white/5">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center text-gray-400">
+                    <Briefcase className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <p className="font-medium text-sm text-gray-300 line-through">{job.id}</p>
+                    <p className="text-xs text-red-400">Removed: {job.removedAt || 'Unknown date'}</p>
+                  </div>
                 </div>
-                <div>
-                  <p className="font-medium text-sm text-gray-300 line-through">{job.id}</p>
-                  <p className="text-xs text-red-400">Removed: {job.removedAt || 'Unknown date'}</p>
+                <div className="text-right">
+                  {job.amount === 0 ? (
+                    <p className="font-semibold text-sm text-gray-500 line-through">To Be Quoted</p>
+                  ) : (
+                    <p className="font-semibold text-sm text-gray-500 line-through">${calculateTotalPrice(job.amount)}</p>
+                  )}
                 </div>
               </div>
-              <div className="text-right">
-                {job.amount === 0 ? (
-                  <p className="font-semibold text-sm text-gray-500 line-through">To Be Quoted</p>
-                ) : (
-                  <p className="font-semibold text-sm text-gray-500 line-through">${calculateTotalPrice(job.amount)}</p>
-                )}
+            ))}
+            
+            {totalPages > 1 && (
+              <div className="flex justify-center items-center gap-2 pt-4 pb-24">
+                <button 
+                  onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                  disabled={currentPage === 1}
+                  className="p-2 rounded-lg bg-white/5 text-white disabled:opacity-50 disabled:cursor-not-allowed hover:bg-white/10 transition"
+                >
+                  <ChevronLeft className="w-4 h-4" />
+                </button>
+                <span className="text-sm text-gray-400">
+                  Page {currentPage} of {totalPages}
+                </span>
+                <button 
+                  onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                  disabled={currentPage === totalPages}
+                  className="p-2 rounded-lg bg-white/5 text-white disabled:opacity-50 disabled:cursor-not-allowed hover:bg-white/10 transition"
+                >
+                  <ChevronRight className="w-4 h-4" />
+                </button>
               </div>
-            </div>
-          ))
+            )}
+          </>
         ) : (
           <div className="flex items-center justify-center h-full text-gray-500">
             <div className="text-center">
