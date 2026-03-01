@@ -30,6 +30,18 @@ import { TipModal } from './TipModal';
 
 import { DateFilterModal, DateRange } from './DateFilterModal';
 
+export const calculateCommission = (labourCost: number) => {
+  if (labourCost < 300) return 100;
+  if (labourCost < 700) return 200;
+  if (labourCost < 1000) return 300;
+  if (labourCost < 2000) return 400;
+  return 500;
+};
+
+export const calculateTotalPrice = (labourCost: number) => {
+  return labourCost + calculateCommission(labourCost);
+};
+
 interface ProfileViewProps {
   user: UserType;
   stats: Stats;
@@ -215,7 +227,7 @@ export const ProfileView: FC<ProfileViewProps> = ({ user, stats, jobs, onUpdateJ
                     </div>
                   </div>
                   <div className="text-right">
-                    <p className="font-semibold text-sm">{formatCurrency(job.amount)}</p>
+                    <p className="font-semibold text-sm">{formatCurrency(calculateTotalPrice(job.amount))}</p>
                     <p className={`text-[10px] ${
                       job.status === 'Completed' ? 'text-green-400' : 
                       job.status === 'Removed' ? 'text-red-400' : 
@@ -309,7 +321,7 @@ export const ProfileView: FC<ProfileViewProps> = ({ user, stats, jobs, onUpdateJ
                     </div>
                   </div>
                   <div className="text-right">
-                    <p className="font-semibold text-sm">{formatCurrency(job.amount)}</p>
+                    <p className="font-semibold text-sm">{formatCurrency(calculateTotalPrice(job.amount))}</p>
                     <p className="text-[10px] text-yellow-400">{job.status}</p>
                   </div>
                 </div>
@@ -350,7 +362,7 @@ export const ProfileView: FC<ProfileViewProps> = ({ user, stats, jobs, onUpdateJ
                       </div>
                     </div>
                     <div className="text-right">
-                      <p className="font-semibold text-sm">{formatCurrency(job.amount)}</p>
+                      <p className="font-semibold text-sm">{formatCurrency(calculateTotalPrice(job.amount))}</p>
                       <p className={`text-[10px] ${job.status === 'Completed' ? 'text-green-400' : 'text-yellow-400'}`}>
                         {job.status}
                         {job.tip ? ` + ${formatCurrency(job.tip)} tip` : ''}
@@ -502,14 +514,6 @@ export const POSView: FC<POSViewProps> = ({ onProcessPayment, initialJobId = '' 
   const [isSuccess, setIsSuccess] = useState(false);
   const [isTableExpanded, setIsTableExpanded] = useState(false);
 
-  const calculateCommission = (labourCost: number) => {
-    if (labourCost < 300) return 100;
-    if (labourCost < 700) return 200;
-    if (labourCost < 1000) return 300;
-    if (labourCost < 2000) return 400;
-    return 500;
-  };
-
   const handleLabourCostChange = (value: string) => {
     setAmount(value);
     if (!value) {
@@ -605,8 +609,13 @@ export const POSView: FC<POSViewProps> = ({ onProcessPayment, initialJobId = '' 
               </div>
               <input 
                 type="text" 
+                inputMode="numeric"
+                maxLength={4}
                 value={jobId}
-                onChange={(e) => setJobId(e.target.value)}
+                onChange={(e) => {
+                  const val = e.target.value.replace(/\D/g, '');
+                  setJobId(val);
+                }}
                 placeholder="0000" 
                 className="w-full bg-white/5 border border-white/10 rounded-2xl pl-20 pr-4 py-3 text-white placeholder:text-[#99A1AF] focus:outline-none focus:border-yellow-400/50 focus:bg-white/10 transition-all font-medium placeholder:font-bold"
               />
@@ -897,22 +906,35 @@ export const PendingView: FC<PendingViewProps> = ({ jobs, onAddJob, onQuoteClick
                       <p className="text-xs text-gray-400">{job.date}</p>
                     </div>
                   </div>
-                  <div className="text-right">
+                  <div className="text-right flex items-center gap-2">
                     {activeTab === 'approval' ? (
-                      <button 
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          onQuoteClick(job.id);
-                        }}
-                        className="bg-[#FACC15] text-black text-xs font-bold px-3 py-1.5 rounded-lg shadow-lg shadow-yellow-400/20 hover:bg-yellow-400 transition"
-                      >
-                        Quote
-                      </button>
-                    ) : (
                       <>
-                        <p className="font-semibold text-sm">{formatCurrency(job.amount)}</p>
-                        <p className="text-[10px] text-yellow-400">{job.status}</p>
+                        <button 
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onQuoteClick(job.id);
+                          }}
+                          className="bg-[#FACC15] text-black text-xs font-bold px-3 py-1.5 rounded-lg shadow-lg shadow-yellow-400/20 hover:bg-yellow-400 transition"
+                        >
+                          Quote
+                        </button>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            const now = new Date();
+                            const formattedDate = `${now.getMonth() + 1}/${now.getDate()}/${now.getFullYear()}`;
+                            onUpdateJob(job.id, { status: 'Removed', removedAt: formattedDate });
+                          }}
+                          className="p-1.5 rounded-lg bg-red-500/10 text-red-400 hover:bg-red-500/20 transition"
+                        >
+                          <Trash className="w-4 h-4" />
+                        </button>
                       </>
+                    ) : (
+                      <div className="text-right">
+                        <p className="font-semibold text-sm">{formatCurrency(calculateTotalPrice(job.amount))}</p>
+                        <p className="text-[10px] text-yellow-400">{job.status}</p>
+                      </div>
                     )}
                   </div>
                 </div>
@@ -926,7 +948,17 @@ export const PendingView: FC<PendingViewProps> = ({ jobs, onAddJob, onQuoteClick
                       transition={{ duration: 0.2 }}
                       className="px-4 pb-4 pt-0 space-y-2 border-t border-white/5 mt-2"
                     >
-                      <div className="grid grid-cols-2 gap-2 pt-4">
+                      <div className="pt-4 pb-2 px-2 space-y-2">
+                        <div className="flex justify-between items-center text-sm">
+                          <span className="text-gray-400">Labor Cost</span>
+                          <span className="font-medium text-white">{formatCurrency(job.amount)}</span>
+                        </div>
+                        <div className="flex justify-between items-center text-sm">
+                          <span className="text-gray-400">Commission</span>
+                          <span className="font-medium text-yellow-400">{formatCurrency(calculateCommission(job.amount))}</span>
+                        </div>
+                      </div>
+                      <div className="grid grid-cols-2 gap-2">
                         <button 
                           onClick={(e) => {
                             e.stopPropagation();
@@ -1133,7 +1165,7 @@ export const AnalyticsView: FC<{ jobs: Job[]; showHistory: boolean }> = ({ jobs,
                       </div>
                     </div>
                     <div className="text-right">
-                      <p className="font-semibold text-sm text-white">{formatCurrency(job.amount)}</p>
+                      <p className="font-semibold text-sm text-white">{formatCurrency(calculateTotalPrice(job.amount))}</p>
                       {job.tip && job.tip > 0 && (
                         <p className="text-[10px] text-yellow-400 flex items-center justify-end gap-1">
                           <span className="w-1 h-1 rounded-full bg-yellow-400"></span>
@@ -1234,7 +1266,11 @@ export const TrashView: FC<{ jobs: Job[] }> = ({ jobs }) => {
                 </div>
               </div>
               <div className="text-right">
-                <p className="font-semibold text-sm text-gray-500 line-through">${job.amount}</p>
+                {job.amount === 0 ? (
+                  <p className="font-semibold text-sm text-gray-500 line-through">To Be Quoted</p>
+                ) : (
+                  <p className="font-semibold text-sm text-gray-500 line-through">${calculateTotalPrice(job.amount)}</p>
+                )}
               </div>
             </div>
           ))

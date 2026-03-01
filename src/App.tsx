@@ -22,7 +22,7 @@ import { supabase } from './lib/supabase';
 
 export default function App() {
   const [currentView, setCurrentView] = useState<ViewState>('pos'); // Default to POS (public)
-  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
+  const [isAuthModalOpen, setIsAuthModalOpen] = useState(true);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [pendingView, setPendingView] = useState<ViewState | null>(null);
   
@@ -43,10 +43,8 @@ export default function App() {
         
         if (now - timestamp < thirtyDays) {
           setIsAuthenticated(true);
+          setIsAuthModalOpen(false);
           setUser(prev => ({ ...prev, name, role, avatar: '' }));
-          // If we have a stored session, we can allow profile as default if we wanted, 
-          // but sticking to POS as default is safer, or we could redirect to profile.
-          // Let's leave it as is.
         } else {
           localStorage.removeItem('auth_session');
         }
