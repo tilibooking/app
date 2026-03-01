@@ -68,14 +68,8 @@ export const AuthModal = ({ isOpen, onClose, onSuccess }: AuthModalProps) => {
             initial={{ opacity: 0, scale: 0.95, y: 20 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95, y: 20 }}
-            className="fixed inset-x-0 bottom-0 md:inset-x-auto md:bottom-auto md:top-1/2 md:left-1/2 md:-translate-x-1/2 md:-translate-y-1/2 md:w-[380px] bg-[#1C1C1E] border-t md:border border-white/10 rounded-t-3xl md:rounded-3xl p-6 z-50 shadow-2xl flex flex-col items-center"
+            className="fixed inset-x-0 bottom-0 md:inset-x-auto md:bottom-auto md:top-1/2 md:left-1/2 md:-translate-x-1/2 md:-translate-y-1/2 md:w-[380px] bg-[#1C1C1E] border-t md:border border-white/10 rounded-t-3xl md:rounded-3xl p-6 z-50 shadow-2xl flex flex-col items-center pt-8"
           >
-            <div className="w-full flex justify-end mb-2">
-              <button onClick={onClose} className="p-2 rounded-full hover:bg-white/10 transition">
-                <X className="w-5 h-5 text-gray-400" />
-              </button>
-            </div>
-
             <div className="w-12 h-12 rounded-full bg-white/5 flex items-center justify-center mb-4">
               <Lock className="w-6 h-6 text-yellow-400" />
             </div>

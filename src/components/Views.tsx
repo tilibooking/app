@@ -569,13 +569,18 @@ export const POSView: FC<POSViewProps> = ({ onProcessPayment, initialJobId = '' 
   };
 
   const handleProcess = async () => {
+    if (!jobId || jobId.length !== 4) {
+      alert("Please enter a valid 4-digit Job ID");
+      return;
+    }
+
     if (!amount || parseFloat(amount) <= 0) {
       alert("Please enter a valid amount");
       return;
     }
 
     setIsProcessing(true);
-    const finalJobId = jobId ? `JOB ID ${jobId}` : `JOB ID ${Math.floor(1000 + Math.random() * 9000)}`;
+    const finalJobId = `JOB ID ${jobId}`;
     
     await onProcessPayment(parseFloat(amount), finalJobId);
     
