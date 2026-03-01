@@ -20,7 +20,8 @@ import {
   LogOut,
   History,
   Camera,
-  Image as ImageIcon
+  Image as ImageIcon,
+  Building2
 } from 'lucide-react';
 import { useState, FC, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
@@ -185,14 +186,14 @@ export const ProfileView: FC<ProfileViewProps> = ({ user, stats, jobs, onUpdateJ
               onClick={onAnalyticsClick}
               className="w-8 h-8 rounded-full bg-white/5 flex items-center justify-center hover:bg-white/10 transition"
             >
-              <BarChart2 className="w-6 h-6 text-gray-400" />
+              <Building2 className="w-6 h-6 text-gray-400" />
             </button>
           )}
           <button 
             onClick={onLogout}
             className="w-8 h-8 rounded-full bg-red-500/10 flex items-center justify-center hover:bg-red-500/20 transition"
           >
-            <LogOut className="w-4 h-4 text-red-500" />
+            <LogOut className="w-6 h-6 text-red-500" />
           </button>
         </div>
       </div>
@@ -280,7 +281,7 @@ export const ProfileView: FC<ProfileViewProps> = ({ user, stats, jobs, onUpdateJ
 
             {/* Visual Breakdown Bar */}
             <div className="glass-card p-4 rounded-2xl mb-6">
-              <div className="flex justify-between text-xs mb-2">
+              <div className="flex justify-between text-[13px] mb-2">
                 <span className="text-gray-400">Payment breakdown</span>
               </div>
               {(() => {
@@ -297,7 +298,7 @@ export const ProfileView: FC<ProfileViewProps> = ({ user, stats, jobs, onUpdateJ
                   </div>
                 );
               })()}
-              <div className="flex justify-between mt-2 text-[10px] text-gray-500">
+              <div className="flex justify-between mt-2 text-[11px] text-gray-500">
                 <span className="flex items-center gap-1"><div className="w-2 h-2 rounded-full bg-[#32AE64]"></div> Revenue</span>
                 <span className="flex items-center gap-1"><div className="w-2 h-2 rounded-full bg-yellow-400"></div> Tips</span>
                 <span className="flex items-center gap-1"><div className="w-2 h-2 rounded-full bg-[#FF6367]"></div> Fees</span>
@@ -321,7 +322,9 @@ export const ProfileView: FC<ProfileViewProps> = ({ user, stats, jobs, onUpdateJ
                     </div>
                   </div>
                   <div className="text-right">
-                    <p className="font-semibold text-sm">{formatCurrency(calculateTotalPrice(job.amount))}</p>
+                    {job.status !== 'Pending Approval' && (
+                      <p className="font-semibold text-sm">{formatCurrency(calculateTotalPrice(job.amount))}</p>
+                    )}
                     <p className="text-[10px] text-yellow-400">{job.status}</p>
                   </div>
                 </div>
@@ -809,6 +812,19 @@ export const PendingView: FC<PendingViewProps> = ({ jobs, onAddJob, onQuoteClick
   const scheduledCount = jobs.filter(j => j.status === 'Scheduled').length;
   const approvalCount = jobs.filter(j => j.status === 'Pending Approval').length;
 
+  const isToday = (dateString: string) => {
+    if (dateString === 'Date still pending') return false;
+    const today = new Date();
+    // The date format is like "Mon, Mar 1, 12:00 PM"
+    // We need to check if it's today. A simple way is to check if it contains today's month and day.
+    const month = today.toLocaleString('en-US', { month: 'short' });
+    const day = today.getDate();
+    return dateString.includes(`${month} ${day},`) || dateString.includes(`${month} ${day} `);
+  };
+
+  const todayJobs = filteredJobs.filter(job => isToday(job.date));
+  const upcomingJobs = filteredJobs.filter(job => !isToday(job.date));
+
   return (
     <motion.div 
       initial={{ opacity: 0, scale: 0.95 }}
@@ -832,7 +848,7 @@ export const PendingView: FC<PendingViewProps> = ({ jobs, onAddJob, onQuoteClick
           <div className="relative inline-block">
             Job Scheduled
             {scheduledCount > 0 && (
-              <span className="absolute -top-1 -right-3 flex h-3 w-3 items-center justify-center rounded-full bg-[#FACC14] text-[8px] font-bold text-black ring-2 ring-[#FACC14]">
+              <span className="absolute -top-1 -right-4 flex h-3 w-3 items-center justify-center rounded-full bg-[#FACC14] text-[8px] font-bold text-black ring-2 ring-[#FACC14]">
                 {scheduledCount}
               </span>
             )}
@@ -852,7 +868,7 @@ export const PendingView: FC<PendingViewProps> = ({ jobs, onAddJob, onQuoteClick
           <div className="relative inline-block">
             Pending Approval
             {approvalCount > 0 && (
-              <span className="absolute -top-1 -right-3 flex h-3 w-3 items-center justify-center rounded-full bg-[#FACC14] text-[8px] font-bold text-black ring-2 ring-[#FACC14]">
+              <span className="absolute -top-1 -right-4 flex h-3 w-3 items-center justify-center rounded-full bg-[#FACC14] text-[8px] font-bold text-black ring-2 ring-[#FACC14]">
                 {approvalCount}
               </span>
             )}
@@ -888,32 +904,263 @@ export const PendingView: FC<PendingViewProps> = ({ jobs, onAddJob, onQuoteClick
 
       <div className="flex-1 overflow-y-auto no-scrollbar">
         {filteredJobs.length > 0 ? (
-          <div className="space-y-3">
-            {filteredJobs.map(job => (
-              <div 
-                key={job.id} 
-                onClick={() => {
-                  if (activeTab === 'scheduled') {
-                    setExpandedJobId(expandedJobId === job.id ? null : job.id);
-                  }
-                }}
-                className={`glass-card rounded-2xl transition-all duration-300 cursor-pointer overflow-hidden ${
-                  expandedJobId === job.id ? 'bg-white/10 ring-1 ring-white/20' : 'hover:bg-white/10'
-                }`}
-              >
-                <div className="p-4 flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center text-gray-400 group-hover:text-yellow-400 transition">
-                      <Briefcase className="w-4 h-4" />
-                    </div>
-                    <div>
-                      <p className="font-medium text-sm">{job.id}</p>
-                      <p className="text-xs text-gray-400">{job.date}</p>
+          <div className="space-y-6">
+            {activeTab === 'scheduled' ? (
+              <>
+                {todayJobs.length > 0 && (
+                  <div>
+                    <h3 className="text-lg font-medium mb-4">Today</h3>
+                    <div className="space-y-3">
+                      {todayJobs.map(job => (
+                        <div 
+                          key={job.id} 
+                          onClick={() => {
+                            setExpandedJobId(expandedJobId === job.id ? null : job.id);
+                          }}
+                          className={`glass-card rounded-2xl transition-all duration-300 cursor-pointer overflow-hidden ${
+                            expandedJobId === job.id ? 'bg-white/10 ring-1 ring-white/20' : 'hover:bg-white/10'
+                          }`}
+                        >
+                          <div className="p-4 flex items-center justify-between">
+                            <div className="flex items-center gap-3">
+                              <div className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center text-gray-400 group-hover:text-yellow-400 transition">
+                                <Briefcase className="w-4 h-4" />
+                              </div>
+                              <div>
+                                <p className="font-medium text-sm">{job.id}</p>
+                                <p className="text-xs text-gray-400">{job.date}</p>
+                              </div>
+                            </div>
+                            <div className="text-right flex items-center gap-2">
+                              <div className="text-right">
+                                <p className="font-semibold text-sm">{formatCurrency(calculateTotalPrice(job.amount))}</p>
+                                <p className="text-[10px] text-yellow-400">
+                                  {job.date === 'Date still pending' ? 'Quote Accepted' : job.status}
+                                </p>
+                              </div>
+                            </div>
+                          </div>
+
+                          <AnimatePresence>
+                            {expandedJobId === job.id && (
+                              <motion.div
+                                initial={{ height: 0, opacity: 0 }}
+                                animate={{ height: "auto", opacity: 1 }}
+                                exit={{ height: 0, opacity: 0 }}
+                                transition={{ duration: 0.2 }}
+                                className="px-4 pb-4 pt-0 space-y-2 border-t border-white/5 mt-2"
+                              >
+                                <div className="pt-4 pb-2 px-2 space-y-2">
+                                  <div className="flex justify-between items-center text-sm">
+                                    <span className="text-gray-400">Labor Cost</span>
+                                    <span className="font-medium text-white">{formatCurrency(job.amount)}</span>
+                                  </div>
+                                  <div className="flex justify-between items-center text-sm">
+                                    <span className="text-gray-400">Commission</span>
+                                    <span className="font-medium text-yellow-400">{formatCurrency(calculateCommission(job.amount))}</span>
+                                  </div>
+                                </div>
+                                <div className="grid grid-cols-2 gap-2">
+                                  <button 
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      onQuoteClick(job.id);
+                                    }}
+                                    className="bg-white/5 hover:bg-white/10 text-white text-xs font-medium py-3 rounded-xl transition"
+                                  >
+                                    Change Quote
+                                  </button>
+                                  <button 
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      setIsDatePickerOpen(true);
+                                    }}
+                                    className="bg-white/5 hover:bg-white/10 text-white text-xs font-medium py-3 rounded-xl transition"
+                                  >
+                                    Change Date
+                                  </button>
+                                  <button 
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      const now = new Date();
+                                      const formattedDate = now.toLocaleString('en-US', {
+                                        month: 'short',
+                                        day: 'numeric',
+                                        hour: 'numeric',
+                                        minute: 'numeric',
+                                        hour12: true
+                                      });
+                                      onUpdateJob(job.id, { status: 'Removed', removedAt: formattedDate });
+                                    }}
+                                    className="bg-red-500/10 hover:bg-red-500/20 text-red-400 text-xs font-medium py-3 rounded-xl transition"
+                                  >
+                                    Remove Job
+                                  </button>
+                                  <button 
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      setJobToComplete(job.id);
+                                      setIsTipModalOpen(true);
+                                    }}
+                                    className="bg-green-500/10 hover:bg-green-500/20 text-green-400 text-xs font-medium py-3 rounded-xl transition"
+                                  >
+                                    Job Completed
+                                  </button>
+                                </div>
+                                <button 
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setExpandedJobId(null);
+                                  }}
+                                  className="w-full text-center text-[10px] text-gray-500 hover:text-gray-300 py-2 transition"
+                                >
+                                  Close details
+                                </button>
+                              </motion.div>
+                            )}
+                          </AnimatePresence>
+                        </div>
+                      ))}
                     </div>
                   </div>
-                  <div className="text-right flex items-center gap-2">
-                    {activeTab === 'approval' ? (
-                      <>
+                )}
+                
+                {upcomingJobs.length > 0 && (
+                  <div>
+                    <h3 className="text-lg font-medium mb-4">Upcoming</h3>
+                    <div className="space-y-3">
+                      {upcomingJobs.map(job => (
+                        <div 
+                          key={job.id} 
+                          onClick={() => {
+                            setExpandedJobId(expandedJobId === job.id ? null : job.id);
+                          }}
+                          className={`glass-card rounded-2xl transition-all duration-300 cursor-pointer overflow-hidden ${
+                            expandedJobId === job.id ? 'bg-white/10 ring-1 ring-white/20' : 'hover:bg-white/10'
+                          }`}
+                        >
+                          <div className="p-4 flex items-center justify-between">
+                            <div className="flex items-center gap-3">
+                              <div className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center text-gray-400 group-hover:text-yellow-400 transition">
+                                <Briefcase className="w-4 h-4" />
+                              </div>
+                              <div>
+                                <p className="font-medium text-sm">{job.id}</p>
+                                <p className="text-xs text-gray-400">{job.date}</p>
+                              </div>
+                            </div>
+                            <div className="text-right flex items-center gap-2">
+                              <div className="text-right">
+                                <p className="font-semibold text-sm">{formatCurrency(calculateTotalPrice(job.amount))}</p>
+                                <p className="text-[10px] text-yellow-400">
+                                  {job.date === 'Date still pending' ? 'Quote Accepted' : job.status}
+                                </p>
+                              </div>
+                            </div>
+                          </div>
+
+                          <AnimatePresence>
+                            {expandedJobId === job.id && (
+                              <motion.div
+                                initial={{ height: 0, opacity: 0 }}
+                                animate={{ height: "auto", opacity: 1 }}
+                                exit={{ height: 0, opacity: 0 }}
+                                transition={{ duration: 0.2 }}
+                                className="px-4 pb-4 pt-0 space-y-2 border-t border-white/5 mt-2"
+                              >
+                                <div className="pt-4 pb-2 px-2 space-y-2">
+                                  <div className="flex justify-between items-center text-sm">
+                                    <span className="text-gray-400">Labor Cost</span>
+                                    <span className="font-medium text-white">{formatCurrency(job.amount)}</span>
+                                  </div>
+                                  <div className="flex justify-between items-center text-sm">
+                                    <span className="text-gray-400">Commission</span>
+                                    <span className="font-medium text-yellow-400">{formatCurrency(calculateCommission(job.amount))}</span>
+                                  </div>
+                                </div>
+                                <div className="grid grid-cols-2 gap-2">
+                                  <button 
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      onQuoteClick(job.id);
+                                    }}
+                                    className="bg-white/5 hover:bg-white/10 text-white text-xs font-medium py-3 rounded-xl transition"
+                                  >
+                                    Change Quote
+                                  </button>
+                                  <button 
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      setIsDatePickerOpen(true);
+                                    }}
+                                    className="bg-white/5 hover:bg-white/10 text-white text-xs font-medium py-3 rounded-xl transition"
+                                  >
+                                    Change Date
+                                  </button>
+                                  <button 
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      const now = new Date();
+                                      const formattedDate = now.toLocaleString('en-US', {
+                                        month: 'short',
+                                        day: 'numeric',
+                                        hour: 'numeric',
+                                        minute: 'numeric',
+                                        hour12: true
+                                      });
+                                      onUpdateJob(job.id, { status: 'Removed', removedAt: formattedDate });
+                                    }}
+                                    className="bg-red-500/10 hover:bg-red-500/20 text-red-400 text-xs font-medium py-3 rounded-xl transition"
+                                  >
+                                    Remove Job
+                                  </button>
+                                  <button 
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      setJobToComplete(job.id);
+                                      setIsTipModalOpen(true);
+                                    }}
+                                    className="bg-green-500/10 hover:bg-green-500/20 text-green-400 text-xs font-medium py-3 rounded-xl transition"
+                                  >
+                                    Job Completed
+                                  </button>
+                                </div>
+                                <button 
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setExpandedJobId(null);
+                                  }}
+                                  className="w-full text-center text-[10px] text-gray-500 hover:text-gray-300 py-2 transition"
+                                >
+                                  Close details
+                                </button>
+                              </motion.div>
+                            )}
+                          </AnimatePresence>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </>
+            ) : (
+              <div className="space-y-3">
+                {filteredJobs.map(job => (
+                  <div 
+                    key={job.id} 
+                    className="glass-card rounded-2xl transition-all duration-300 overflow-hidden hover:bg-white/10"
+                  >
+                    <div className="p-4 flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center text-gray-400 group-hover:text-yellow-400 transition">
+                          <Briefcase className="w-4 h-4" />
+                        </div>
+                        <div>
+                          <p className="font-medium text-sm">{job.id}</p>
+                          <p className="text-xs text-gray-400">{job.date}</p>
+                        </div>
+                      </div>
+                      <div className="text-right flex items-center gap-2">
                         <button 
                           onClick={(e) => {
                             e.stopPropagation();
@@ -934,96 +1181,12 @@ export const PendingView: FC<PendingViewProps> = ({ jobs, onAddJob, onQuoteClick
                         >
                           <Trash className="w-4 h-4" />
                         </button>
-                      </>
-                    ) : (
-                      <div className="text-right">
-                        <p className="font-semibold text-sm">{formatCurrency(calculateTotalPrice(job.amount))}</p>
-                        <p className="text-[10px] text-yellow-400">{job.status}</p>
                       </div>
-                    )}
+                    </div>
                   </div>
-                </div>
-
-                <AnimatePresence>
-                  {expandedJobId === job.id && activeTab === 'scheduled' && (
-                    <motion.div
-                      initial={{ height: 0, opacity: 0 }}
-                      animate={{ height: "auto", opacity: 1 }}
-                      exit={{ height: 0, opacity: 0 }}
-                      transition={{ duration: 0.2 }}
-                      className="px-4 pb-4 pt-0 space-y-2 border-t border-white/5 mt-2"
-                    >
-                      <div className="pt-4 pb-2 px-2 space-y-2">
-                        <div className="flex justify-between items-center text-sm">
-                          <span className="text-gray-400">Labor Cost</span>
-                          <span className="font-medium text-white">{formatCurrency(job.amount)}</span>
-                        </div>
-                        <div className="flex justify-between items-center text-sm">
-                          <span className="text-gray-400">Commission</span>
-                          <span className="font-medium text-yellow-400">{formatCurrency(calculateCommission(job.amount))}</span>
-                        </div>
-                      </div>
-                      <div className="grid grid-cols-2 gap-2">
-                        <button 
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            onQuoteClick(job.id);
-                          }}
-                          className="bg-white/5 hover:bg-white/10 text-white text-xs font-medium py-3 rounded-xl transition"
-                        >
-                          Change Quote
-                        </button>
-                        <button 
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setIsDatePickerOpen(true);
-                          }}
-                          className="bg-white/5 hover:bg-white/10 text-white text-xs font-medium py-3 rounded-xl transition"
-                        >
-                          Change Date
-                        </button>
-                        <button 
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            const now = new Date();
-                            const formattedDate = now.toLocaleString('en-US', {
-                              month: 'short',
-                              day: 'numeric',
-                              hour: 'numeric',
-                              minute: 'numeric',
-                              hour12: true
-                            });
-                            onUpdateJob(job.id, { status: 'Removed', removedAt: formattedDate });
-                          }}
-                          className="bg-red-500/10 hover:bg-red-500/20 text-red-400 text-xs font-medium py-3 rounded-xl transition"
-                        >
-                          Remove Job
-                        </button>
-                        <button 
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setJobToComplete(job.id);
-                            setIsTipModalOpen(true);
-                          }}
-                          className="bg-green-500/10 hover:bg-green-500/20 text-green-400 text-xs font-medium py-3 rounded-xl transition"
-                        >
-                          Job Completed
-                        </button>
-                      </div>
-                      <button 
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setExpandedJobId(null);
-                        }}
-                        className="w-full text-center text-[10px] text-gray-500 hover:text-gray-300 py-2 transition"
-                      >
-                        Close details
-                      </button>
-                    </motion.div>
-                  )}
-                </AnimatePresence>
+                ))}
               </div>
-            ))}
+            )}
           </div>
         ) : (
           <div className="flex items-center justify-center h-full text-gray-500">
@@ -1060,6 +1223,7 @@ export const PendingView: FC<PendingViewProps> = ({ jobs, onAddJob, onQuoteClick
 
 export const AnalyticsView: FC<{ jobs: Job[]; showHistory: boolean }> = ({ jobs, showHistory }) => {
   const [selectedUser, setSelectedUser] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState<'analytics' | 'jobSetup' | 'users'>('analytics');
 
   // Mock users for analytics (since we don't have multi-user support in DB yet)
   // In a real app, we would group jobs by user_id
@@ -1103,22 +1267,57 @@ export const AnalyticsView: FC<{ jobs: Job[]; showHistory: boolean }> = ({ jobs,
       animate={{ opacity: 1, x: 0 }}
       exit={{ opacity: 0, x: -20 }}
       transition={{ duration: 0.3 }}
-      className="space-y-6 pb-24"
+      className="flex flex-col h-full space-y-6 pb-24"
     >
-      <div className="flex items-center justify-between px-2 mb-6">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-full bg-yellow-500/10 flex items-center justify-center text-yellow-500">
-            <BarChart2 className="w-5 h-5" />
-          </div>
-          <div>
-            <h2 className="text-xl font-bold text-white">Team Analytics</h2>
-            <p className="text-xs text-gray-400">Performance breakdown by technician</p>
-          </div>
-        </div>
+      <div className="flex p-1 bg-white/10 rounded-xl mb-6">
+        <button
+          onClick={() => setActiveTab('analytics')}
+          className={`flex-1 py-2 text-sm font-medium rounded-lg transition-all ${
+            activeTab === 'analytics' 
+              ? 'bg-white text-black shadow-lg' 
+              : 'text-gray-400 hover:text-white'
+          }`}
+        >
+          Analytics
+        </button>
+        <button
+          onClick={() => setActiveTab('jobSetup')}
+          className={`flex-1 py-2 text-sm font-medium rounded-lg transition-all ${
+            activeTab === 'jobSetup' 
+              ? 'bg-white text-black shadow-lg' 
+              : 'text-gray-400 hover:text-white'
+          }`}
+        >
+          Job Setup
+        </button>
+        <button
+          onClick={() => setActiveTab('users')}
+          className={`flex-1 py-2 text-sm font-medium rounded-lg transition-all ${
+            activeTab === 'users' 
+              ? 'bg-white text-black shadow-lg' 
+              : 'text-gray-400 hover:text-white'
+          }`}
+        >
+          Users
+        </button>
       </div>
 
-      <AnimatePresence mode="wait">
-        {showHistory ? (
+      {activeTab === 'analytics' && (
+        <>
+          <div className="flex items-center justify-between px-2 mb-6">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-full bg-yellow-500/10 flex items-center justify-center text-yellow-500">
+                <BarChart2 className="w-5 h-5" />
+              </div>
+              <div>
+                <h2 className="text-xl font-bold text-white">Team Analytics</h2>
+                <p className="text-xs text-gray-400">Performance breakdown by technician</p>
+              </div>
+            </div>
+          </div>
+
+          <AnimatePresence mode="wait">
+            {showHistory ? (
           <motion.div
             key="history"
             initial={{ opacity: 0, y: 10 }}
@@ -1235,6 +1434,20 @@ export const AnalyticsView: FC<{ jobs: Job[]; showHistory: boolean }> = ({ jobs,
           </motion.div>
         )}
       </AnimatePresence>
+        </>
+      )}
+
+      {activeTab === 'jobSetup' && (
+        <div className="text-center py-12 text-gray-500">
+          <p>Job Setup coming soon</p>
+        </div>
+      )}
+
+      {activeTab === 'users' && (
+        <div className="text-center py-12 text-gray-500">
+          <p>Users coming soon</p>
+        </div>
+      )}
     </motion.div>
   );
 };

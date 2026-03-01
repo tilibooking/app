@@ -381,7 +381,7 @@ export default function App() {
             className={`relative flex flex-col items-center justify-center w-16 h-16 transition ${currentView === 'profile' ? 'text-[#FACC15]' : 'text-gray-400 hover:text-white'}`}
           >
             <User className="w-5 h-5 mb-1" />
-            <span className="text-[10px] font-medium">Profile</span>
+            <span className="text-[12px] font-medium">Profile</span>
             {currentView === 'profile' && (
               <motion.div layoutId="nav-indicator" className="absolute bottom-2 w-1 h-1 bg-[#FACC15] rounded-full" />
             )}
@@ -395,7 +395,7 @@ export default function App() {
             >
               <DollarSign className="w-6 h-6 font-bold" />
             </button>
-            <span className="absolute -bottom-6 left-1/2 transform -translate-x-1/2 text-[10px] font-medium text-gray-400">Quote</span>
+            <span className="absolute -bottom-6 left-1/2 transform -translate-x-1/2 text-[12px] font-medium text-gray-400">Quote</span>
           </div>
 
           <button 
@@ -410,7 +410,7 @@ export default function App() {
                 </span>
               )}
             </div>
-            <span className="text-[10px] font-medium">Pending</span>
+            <span className="text-[12px] font-medium">Pending</span>
             {currentView === 'pending' && (
               <motion.div layoutId="nav-indicator" className="absolute bottom-2 w-1 h-1 bg-[#FACC15] rounded-full" />
             )}
